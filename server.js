@@ -40,6 +40,25 @@ app.get("/users/:id", async (req, res) => {
     }
   });
 
+  app.post("/users", async (req, res) => {
+    const { firstName, lastName, age } = req.body;
+    if (!firstName || !lastName || !age) {
+      return res.status(400).send("Please fill in your first name, last name and age");
+    }
+    try {
+      const {
+        rows: [createdUser],
+      } = await pool.query(
+        "INSERT INTO users(first_name, last_name, age) VALUES($1, $2, $3) RETURNING *;",
+        [firstName, lastName, age]
+      );
+      return res.status(201).send(createdUser);
+    } catch (err) {
+      console.log(err);
+      return res.status(500).send("Something went wrong");
+    }
+  });
+
 
 
   app.get("/orders", async (req, res) => {
