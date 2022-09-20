@@ -4,7 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const pool = require("./db");
-const luxon = require("luxon");
+const { DateTime } = require("luxon");
 
 const PORT = process.env.PORT || 8080;
 
@@ -152,7 +152,7 @@ app.get("/orders/:id", async (req, res) => {
 
 app.post("/orders", async (req, res) => {
   const { price, userId } = req.body;
-  const date = new Date();
+  const date = DateTime.now();
   if (!price || !date || !userId) {
     return res.status(400).send("Please fill in price, date and user ID");
   }
@@ -164,6 +164,64 @@ app.post("/orders", async (req, res) => {
       [price, date, userId]
     );
     return res.status(201).send(createdOrder);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send("Something went wrong");
+  }
+});
+
+app.put("/orders/:id", async (req, res) => {
+  const { id } = req.params;
+  const { price, userId } = req.body;
+  const date = DateTime.now();
+
+  if (!price || !date || !userId)
+    return res
+      .status(400)
+      .send("Please provide values for price, date and user ID");
+
+  try {
+    const {
+      rowCount,
+      rows: [updatedOrder],
+    } = await pool.query(
+      "UPDATE orders SET price=$1, date=$2, user_id=$3 WHERE id=$4 RETURNING *",
+      [price, date, userId, id]
+    );
+
+    if (!rowCount)
+      return res
+        .status(404)
+        .send(
+          `The order with id ${id} that you are trying to update does not exist`
+        );
+
+    return res.status(201).send(updatedOrder);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send("Something went wrong");
+  }
+});
+
+app.delete("/orders/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const {
+      rows: [deletedOrder],
+      rowCount,
+    } = await pool.query("DELETE FROM orders WHERE id=$1 RETURNING *", [id]);
+
+    if (!rowCount)
+      return res
+        .status(404)
+        .send(
+          `The order with id ${id} that you are trying to delete does not exist`
+        );
+
+    return res
+      .status(200)
+      .send(`The order "${deletedOrder.id}" has been deleted`);
   } catch (err) {
     console.log(err);
     return res.status(500).send("Something went wrong");
