@@ -59,6 +59,39 @@ app.get("/users/:id", async (req, res) => {
     }
   });
 
+    app.put("/users/:id", async (req, res) => {
+        const { id } = req.params;
+    
+        const { firstName, lastName, age } = req.body;
+    
+        if (!firstName || !lastName || !age)
+        return res
+            .status(400)
+            .send("Please provide values for first name, last name, age");
+    
+        try {
+        const {
+            rowCount,
+            rows: [updatedUser],
+        } = await pool.query(
+            "UPDATE users SET first_name=$1,last_name=$2,age=$3 WHERE id=$4 RETURNING *",
+            [firstName, lastName, age, id]
+        );
+    
+        if (!rowCount)
+            return res
+            .status(404)
+            .send(
+                `The user with id ${id} that you are trying to update does not exist`
+            );
+    
+        return res.status(201).send(updatedUser);
+        } catch (err) {
+        console.log(err);
+        return res.status(500).send("Something went wrong");
+        }
+    });
+
 
 
   app.get("/orders", async (req, res) => {
